@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<!-- saved from url=(0065)file:///C:/Users/Administrator/Desktop/%E6%8A%A5%E4%BB%B7APP.HTML -->
+<html lang="zh-CN"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>报价计算器 (表格同款)</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f2f2f7;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        h2 { text-align: center; margin-bottom: 20px; color: #1c1c1e; font-size: 20px;}
+        
+        .section-title {
+            font-size: 14px;
+            color: #8e8e93;
+            margin: 15px 0 8px 5px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        /* 网格布局：让杂费输入框排两列，节省空间 */
+        .cost-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .input-group { margin-bottom: 10px; }
+        label { display: block; margin-bottom: 6px; font-weight: 500; font-size: 13px; color: #333; }
+        
+        input[type="number"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #e5e5ea;
+            border-radius: 10px;
+            font-size: 16px;
+            box-sizing: border-box;
+            background-color: #f9f9f9;
+            transition: all 0.2s;
+            -moz-appearance: textfield;
+        }
+        input[type="number"]:focus {
+            border-color: #007aff;
+            background-color: #fff;
+            outline: none;
+        }
+        
+        /* 重点突出裸刀价和利润 */
+        .main-input input {
+            border-color: #d1d1d6;
+            background-color: #fff;
+            font-weight: bold;
+        }
+
+        .btn-container { display: flex; gap: 10px; margin-top: 25px; }
+        button {
+            flex: 1; padding: 14px; font-size: 16px; font-weight: bold;
+            border: none; border-radius: 12px; cursor: pointer;
+        }
+        .btn-calc { background-color: #34c759; color: white; } /* 绿色代表利润 */
+        .btn-calc:active { background-color: #248a3d; }
+        .btn-reset { background-color: #e5e5ea; color: #333; max-width: 30%; }
+
+        .result-card {
+            margin-top: 25px;
+            padding: 20px;
+            background-color: #f2fcf5; /* 浅绿背景 */
+            border: 1px solid #dcfce7;
+            border-radius: 12px;
+            display: none;
+        }
+        .result-row {
+            display: flex; justify-content: space-between;
+            margin-bottom: 8px; font-size: 14px; color: #555;
+        }
+        .result-row.highlight {
+            margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ccc;
+            font-size: 18px; color: #333; font-weight: bold;
+        }
+        .price-tag { color: #d32f2f; font-size: 24px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>📊 报价计算器 (倒扣毛利版)</h2>
+
+    <div class="section-title">核心成本</div>
+    <div class="input-group main-input">
+        <label>🔪 裸刀价 (Factory Price)</label>
+        <input type="number" id="basePrice" placeholder="输入金额" inputmode="decimal">
+    </div>
+
+    <div class="section-title">杂费明细 (没有填0)</div>
+    <div class="cost-grid">
+        <div class="input-group">
+            <label>📦 包装费</label>
+            <input type="number" class="sub-cost" placeholder="0" inputmode="decimal">
+        </div>
+        <div class="input-group">
+            <label>📦 纸箱费</label>
+            <input type="number" class="sub-cost" placeholder="0" inputmode="decimal">
+        </div>
+        <div class="input-group">
+            <label>🚚 运费</label>
+            <input type="number" class="sub-cost" placeholder="0" inputmode="decimal">
+        </div>
+        <div class="input-group">
+            <label>🛠️ 其他费用</label>
+            <input type="number" class="sub-cost" placeholder="0" inputmode="decimal">
+        </div>
+    </div>
+
+    <div class="section-title">目标利润</div>
+    <div class="input-group main-input">
+        <label>📈 目标毛利率 % (Gross Margin)</label>
+        <input type="number" id="marginRate" placeholder="例如 20" inputmode="decimal">
+    </div>
+
+    <div class="btn-container">
+        <button class="btn-reset" onclick="resetForm()">重置</button>
+        <button class="btn-calc" onclick="calculate()">计算报价</button>
+    </div>
+
+    <div class="result-card" id="resultArea" style="display: block;">
+        <div class="result-row">
+            <span>各项总成本:</span>
+            <span id="totalCostDisplay">21.85</span>
+        </div>
+        <div class="result-row">
+            <span>预估净利润:</span>
+            <span id="profitAmtDisplay" style="color:green; font-weight:bold;">2.43</span>
+        </div>
+        
+        <div class="result-row highlight">
+            <span>建议对外报价:</span>
+            <span class="price-tag" id="finalPriceDisplay">24.28</span>
+        </div>
+        <div style="text-align:center; font-size:12px; color:#999; margin-top:5px;">
+            (基于公式: 成本 ÷ (1 - 毛利率))
+        </div>
+    </div>
+</div>
+
+<script>
+    function calculate() {
+        // 1. 获取裸刀价
+        var basePrice = parseFloat(document.getElementById('basePrice').value) || 0;
+
+        // 2. 累加所有杂费 (遍历所有 class="sub-cost" 的输入框)
+        var subCosts = document.getElementsByClassName('sub-cost');
+        var totalExtra = 0;
+        for (var i = 0; i < subCosts.length; i++) {
+            totalExtra += parseFloat(subCosts[i].value) || 0;
+        }
+
+        // 3. 计算总成本
+        var totalCost = basePrice + totalExtra;
+
+        // 4. 获取毛利率
+        var marginRate = parseFloat(document.getElementById('marginRate').value) || 0;
+
+        // --- 核心修改：使用您表格里的公式 (倒扣法) ---
+        // 报价 = 总成本 / (1 - 毛利率%)
+        // 例如：成本21.85, 20%毛利 -> 21.85 / 0.8 = 27.31
+        
+        if (marginRate >= 100) {
+            alert("毛利率不能超过或等于100%！");
+            return;
+        }
+
+        var finalPrice = 0;
+        if (marginRate < 100) {
+            finalPrice = totalCost / (1 - (marginRate / 100));
+        }
+        
+        var profitAmt = finalPrice - totalCost;
+
+        // 5. 显示结果
+        document.getElementById('totalCostDisplay').innerText = totalCost.toFixed(2);
+        document.getElementById('finalPriceDisplay').innerText = finalPrice.toFixed(2);
+        document.getElementById('profitAmtDisplay').innerText = profitAmt.toFixed(2);
+        document.getElementById('resultArea').style.display = 'block';
+    }
+
+    function resetForm() {
+        document.getElementById('basePrice').value = '';
+        document.getElementById('marginRate').value = '';
+        var subCosts = document.getElementsByClassName('sub-cost');
+        for (var i = 0; i < subCosts.length; i++) {
+            subCosts[i].value = '';
+        }
+        document.getElementById('resultArea').style.display = 'none';
+    }
+</script>
+
+
+</body></html>
